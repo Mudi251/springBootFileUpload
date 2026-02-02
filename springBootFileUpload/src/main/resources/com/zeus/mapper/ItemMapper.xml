@@ -6,10 +6,6 @@
 		VALUES(item_seq.NEXTVAL, #{name}, #{price}, #{description}, #{url})
 	</insert>
 
-	<select id="read" resultType="Item">
-
-	</select>
-
 	<update id="update">
 
 	</update>
@@ -22,5 +18,12 @@
 <![CDATA[ 
 		SELECT id, name, price, description, url FROM item 
 		WHERE id > 0 ORDER BY id DESC ]]>
-	</select><select id="getPicture" resultType="String"></select>
+
+	</select>
+	<select id="getPicture" resultType="String">
+		SELECT url FROM item WHERE id = #{id}
+	</select>
+	<select id="read" resultType="Item">
+		SELECT id, name, price, description,url FROM item WHERE id = #{id}
+	</select>
 </mapper>
