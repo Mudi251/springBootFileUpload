@@ -158,7 +158,7 @@ public class ItemController {
 	@PostMapping("/update")
 	public String itemUpdate(Item item, Model model) throws Exception {
 		log.info("/update item" + item.toString());
-		
+
 		MultipartFile file = item.getPicture();
 		String oldUrl = null; // if문 밖에서 미리 선언 (나중에 삭제할 때 사용)
 
@@ -171,7 +171,7 @@ public class ItemController {
 			// 새로운 파일 정보 출력 및 저장
 			log.info("New OriginalName: " + file.getOriginalFilename());
 			log.info("New Size: " + file.getSize());
-			
+
 			String createdFileName = uploadFile(file.getOriginalFilename(), file.getBytes());
 			item.setUrl(createdFileName); // 새로운 파일명으로 업데이트
 		}
@@ -187,21 +187,39 @@ public class ItemController {
 			model.addAttribute("message", "상품수정 성공");
 			return "item/success";
 		}
-		
+
 		model.addAttribute("message", "상품수정 실패");
 		return "item/failed";
 	}
-	
-	// 외부저장소 자료업로드 파일명생성후 저장 
-	 // c:/upload/"../window/system.ini" 디렉토리 탈출공격(path tarversal) 
-	 private boolean deleteFile(String fileName) throws Exception { 
-	  if(fileName.contains("..")) { 
-	   throw new IllegalArgumentException("잘못된 경로 입니다."); 
-	  } 
-	  File file = new File(uploadPath, fileName); 
-	  return (file.exists() == true)?(file.delete()):(false);  
-	 } 
-	
+
+	@GetMapping("/delete")
+	public String itemDelte(Item item, Model model) throws Exception {
+		log.info("/delete item = " + item.toString());
+		String url = itemService.getPicture(item);
+		int count = itemService.delete(item);
+		
+		if (count > 0) {
+			// 테이블에 수정내용이 완료가 되고 그리고 나서 이전 이미지 파일을 삭제한다.
+			if (url != null) deleteFile(url);{
+			model.addAttribute("message", "%d상품삭제 성공".formatted(item.getId()));
+			return "item/success";
+				
+			}
+		}
+
+		model.addAttribute("message", "상품삭제 실패".formatted(item.getId()));
+		return "item/failed";
+	}
+	// 외부저장소 자료업로드 파일명생성후 저장
+	// c:/upload/"../window/system.ini" 디렉토리 탈출공격(path tarversal)
+	private boolean deleteFile(String fileName) throws Exception {
+		if (fileName.contains("..")) {
+			throw new IllegalArgumentException("잘못된 경로 입니다.");
+		}
+		File file = new File(uploadPath, fileName);
+		return (file.exists() == true) ? (file.delete()) : (false);
+	}
+
 	private String uploadFile(String originalName, byte[] fileData) throws Exception {
 		UUID uid = UUID.randomUUID(); // 절대 중복되지 않는 문자열 생성
 		// cdc39bc0-a135-4f2b-8526-801ff1ee1b46_도훈.jpg
