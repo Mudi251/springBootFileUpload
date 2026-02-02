@@ -99,7 +99,7 @@ body {
 		</div>
 		<div class="btn-area">
 			<a href="/item/createForm"><button class="btn">상품등록</button></a>
-			<a href="/item/List"><button class="btn">상품리스트</button></a>
+			<a href="/item/list"><button class="btn">상품리스트</button></a>
 		</div>
 	</div>
 </body>
