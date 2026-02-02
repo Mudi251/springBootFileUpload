@@ -1,14 +1,5 @@
 package com.zeus.controller;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.apache.commons.io.IOUtils; // Apache Commons IO 라이브러리 필요
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.File;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -16,10 +7,13 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.io.IOUtils; // Apache Commons IO 라이브러리 필요
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -156,42 +150,37 @@ public class ItemController {
 	}
 
 	@PostMapping("/update")
-	public String itemUpdate(Item item, Model model) throws Exception {
-		log.info("/update item" + item.toString());
+    public String itemUpdate(Item item, Model model) throws Exception {
+        log.info("/update item= " + item.toString());
+        MultipartFile file = item.getPicture();
+        Item oldItem = itemService.read(item);
 
-		MultipartFile file = item.getPicture();
-		String oldUrl = null; // if문 밖에서 미리 선언 (나중에 삭제할 때 사용)
+        if (file != null && file.getSize() > 0) {
+            //새로운업로드 이미지파일
+            log.info("originalName: " + file.getOriginalFilename());
+            log.info("size: " + file.getSize());
+            log.info("contentType: " + file.getContentType());
+            String createdFileName = uploadFile(file.getOriginalFilename(), file.getBytes());
+            item.setUrl(createdFileName);
+            int count = itemService.update(item);
+            if (count > 0) {
+                //테이블에 수정내용이 완료가 되고 그리고 나서 이전 이미지 파일을 삭제한다.
+                if(oldItem.getUrl() != null) deleteFile(oldItem.getUrl());
+                model.addAttribute("message", "%s 상품수정 성공".formatted(item.getName()));
+                return "item/success";
+            }
+        }else {
+            item.setUrl(oldItem.getUrl());
+            int count = itemService.update(item);
+            if (count > 0) {
+                model.addAttribute("message", "%s 상품수정 성공".formatted(item.getName()));
+                return "item/success";
+            }
+        }
 
-		// 1. 새로운 파일이 업로드되었는지 확인
-		if (file != null && file.getSize() > 0) {
-			// 기존 파일 정보를 가져옴 (삭제를 위해)
-			Item oldItem = itemService.read(item);
-			oldUrl = oldItem.getUrl();
-
-			// 새로운 파일 정보 출력 및 저장
-			log.info("New OriginalName: " + file.getOriginalFilename());
-			log.info("New Size: " + file.getSize());
-
-			String createdFileName = uploadFile(file.getOriginalFilename(), file.getBytes());
-			item.setUrl(createdFileName); // 새로운 파일명으로 업데이트
-		}
-
-		// 2. DB 업데이트 실행
-		int count = itemService.update(item);
-
-		if (count > 0) {
-			// DB 수정 성공 시에만 이전 이미지 파일을 실제로 삭제
-			if (oldUrl != null) {
-				deleteFile(oldUrl);
-			}
-			model.addAttribute("message", "상품수정 성공");
-			return "item/success";
-		}
-
-		model.addAttribute("message", "상품수정 실패");
-		return "item/failed";
-	}
-
+        model.addAttribute("message", "%s 상품수정 실패".formatted(item.getName()));
+        return "item/failed";
+    }
 	@GetMapping("/delete")
 	public String itemDelte(Item item, Model model) throws Exception {
 		log.info("/delete item = " + item.toString());
