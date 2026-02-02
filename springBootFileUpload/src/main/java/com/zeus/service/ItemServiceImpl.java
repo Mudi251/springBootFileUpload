@@ -27,8 +27,8 @@ public class ItemServiceImpl implements ItemService {
 
 	@Override
 	public int update(Item item) throws Exception {
-		// TODO Auto-generated method stub
-		return 0;
+		int count = itemMapper.update(item);
+		return count;
 	}
 
 	@Override

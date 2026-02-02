@@ -6,10 +6,9 @@
 		VALUES(item_seq.NEXTVAL, #{name}, #{price}, #{description}, #{url})
 	</insert>
 
-	<update id="update">
-
-	</update>
-
+	<update id="update"> 
+UPDATE item SET name = #{name}, price = #{price}, description = #{description}, url = #{url} WHERE id = #{id} 
+</update> 
 	<delete id="delete">
 
 	</delete>

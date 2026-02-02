@@ -92,35 +92,35 @@ public class ItemController {
 		model.addAttribute("item", i);
 		return "item/detail";
 	}
-	
-	//화면을 요ㅗ청하는 것이 아니고, 데이타를 보내줄 것을 요청.
+
+	// 화면을 요ㅗ청하는 것이 아니고, 데이타를 보내줄 것을 요청.
 	@ResponseBody
 	@GetMapping("/display")
 	public ResponseEntity<byte[]> itemDisplay(Item item) throws Exception {
-		//파일을 
+		// 파일을
 		InputStream in = null;
 		ResponseEntity<byte[]> entity = null;
-		
+
 		String url = itemService.getPicture(item);
 		log.info("File url:" + url);
-		
+
 		String fileName = itemService.getPicture(item);
 		log.info("FILE NAME: " + fileName);
 		try {
-			//String url = 2687a8b-4d6f-41c3-91cc-16286d16dc73_kitten-1.jpg
-			//파일명의 확장자 가져옴 String formatName = "jpg";
-			String formatName = url.substring(url.lastIndexOf(".")+ 1);
-			//확장자가 jpg라면 MediaType.IMAGE_JEPG
+			// String url = 2687a8b-4d6f-41c3-91cc-16286d16dc73_kitten-1.jpg
+			// 파일명의 확장자 가져옴 String formatName = "jpg";
+			String formatName = url.substring(url.lastIndexOf(".") + 1);
+			// 확장자가 jpg라면 MediaType.IMAGE_JEPG
 			MediaType mType = getMediaType(formatName);
-			//클라이언트 <-> 서버 (header, body)
+			// 클라이언트 <-> 서버 (header, body)
 			HttpHeaders headers = new HttpHeaders();
-			//이미지파일을 inputstream 가져옴.
+			// 이미지파일을 inputstream 가져옴.
 			in = new FileInputStream(uploadPath + File.separator + url);
-			//이미지파일타입이 널이 아니라면, 헤더에 이미지타입을 저장
+			// 이미지파일타입이 널이 아니라면, 헤더에 이미지타입을 저장
 			if (mType != null) {
 				headers.setContentType(mType);
 			}
-			//IOUtils.toByteArray(in) : inputstream 저장된 파일을 byte[] 변환한다.
+			// IOUtils.toByteArray(in) : inputstream 저장된 파일을 byte[] 변환한다.
 			entity = new ResponseEntity<byte[]>(IOUtils.toByteArray(in), headers, HttpStatus.CREATED);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -129,6 +129,14 @@ public class ItemController {
 			in.close();
 		}
 		return entity;
+	}
+
+	@GetMapping("/updateForm")
+	public String itemUpdateForm(Item i, Model model) throws Exception {
+		log.info("/updateForm item" + i.toString());
+		Item item = itemService.read(i);
+		model.addAttribute("item", item);
+		return "item/updateForm";
 	}
 
 	private MediaType getMediaType(String form) {
@@ -147,6 +155,53 @@ public class ItemController {
 		return null;
 	}
 
+	@PostMapping("/update")
+	public String itemUpdate(Item item, Model model) throws Exception {
+		log.info("/update item" + item.toString());
+		
+		MultipartFile file = item.getPicture();
+		String oldUrl = null; // if문 밖에서 미리 선언 (나중에 삭제할 때 사용)
+
+		// 1. 새로운 파일이 업로드되었는지 확인
+		if (file != null && file.getSize() > 0) {
+			// 기존 파일 정보를 가져옴 (삭제를 위해)
+			Item oldItem = itemService.read(item);
+			oldUrl = oldItem.getUrl();
+
+			// 새로운 파일 정보 출력 및 저장
+			log.info("New OriginalName: " + file.getOriginalFilename());
+			log.info("New Size: " + file.getSize());
+			
+			String createdFileName = uploadFile(file.getOriginalFilename(), file.getBytes());
+			item.setUrl(createdFileName); // 새로운 파일명으로 업데이트
+		}
+
+		// 2. DB 업데이트 실행
+		int count = itemService.update(item);
+
+		if (count > 0) {
+			// DB 수정 성공 시에만 이전 이미지 파일을 실제로 삭제
+			if (oldUrl != null) {
+				deleteFile(oldUrl);
+			}
+			model.addAttribute("message", "상품수정 성공");
+			return "item/success";
+		}
+		
+		model.addAttribute("message", "상품수정 실패");
+		return "item/failed";
+	}
+	
+	// 외부저장소 자료업로드 파일명생성후 저장 
+	 // c:/upload/"../window/system.ini" 디렉토리 탈출공격(path tarversal) 
+	 private boolean deleteFile(String fileName) throws Exception { 
+	  if(fileName.contains("..")) { 
+	   throw new IllegalArgumentException("잘못된 경로 입니다."); 
+	  } 
+	  File file = new File(uploadPath, fileName); 
+	  return (file.exists() == true)?(file.delete()):(false);  
+	 } 
+	
 	private String uploadFile(String originalName, byte[] fileData) throws Exception {
 		UUID uid = UUID.randomUUID(); // 절대 중복되지 않는 문자열 생성
 		// cdc39bc0-a135-4f2b-8526-801ff1ee1b46_도훈.jpg
